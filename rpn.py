@@ -7,7 +7,7 @@ from coco_utils import Coco,CocoData
 
 import random
 if __name__ == '__main__':
-    CUDA_INDEX=1
+    CUDA_INDEX=0
     evaluation="val"
     ann_path = "e:/python/coco_dataset/annotations_trainval2017/annotations/instances_%s2017.json"%evaluation
     imgs_path = "e:/python/coco_dataset/%s2017"%evaluation
@@ -34,13 +34,13 @@ if __name__ == '__main__':
             anchors_dict=Utils.get_anchors_dict(f_width,f_height,16)#得到所有的anchor (26,40,9,4),numpy 格式
             gt_anchors, pos_diff_dict,pos_dict, ign_dict, neg_dict = Utils.filter_anchors(anchors_dict, gt_bboxes, 0.7, 0.3)
 
-            # Utils.anchors_visualization(img_width,img_height,anchors_dict,show_center=True)
-            # Utils.show_img_anchors(raw_img, gt_anchors, (0, 255, 0))
-            # Utils.show_img_anchors(raw_img, pos_dict, (0, 255, 0))
-            # Utils.show_img_anchors(raw_img, ign_dict, (0, 255, 0))
-            # Utils.show_img_anchors(raw_img, neg_dict, (0, 255, 0))
+            Utils.anchors_visualization(img_width,img_height,anchors_dict,show_center=True)
+            Utils.show_img_anchors(raw_img, gt_anchors)
+            Utils.show_img_anchors(raw_img, pos_dict,show_gt=True)
+            Utils.show_img_anchors(raw_img, ign_dict,)
+            Utils.show_img_anchors(raw_img, neg_dict,)
 
-            len_pos=len(pos_dict)
+            len_pos=len(pos_diff_dict)
             print(len_pos)
             neg_potisions=list(ign_dict.keys())
             random.shuffle(neg_potisions)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
             c,numbers,height,width=label_cls.size()
             label_cls=label_cls.view(c,9,2,height,width)
             label_reg=label_reg.view(c,9,4,height,width)
-            for h,w,num in pos_dict:
+            for h,w,num in pos_diff_dict:
                 label_cls[0,num,:,h,w]=torch.tensor([1,0])
                 label_reg[0,num,:,h,w]=torch.Tensor(pos_diff_dict[h,w,num]) #anchor-ground truth
 

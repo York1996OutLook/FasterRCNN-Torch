@@ -2,7 +2,7 @@ import cv2,numpy as np,torch
 from torch.utils.data import Dataset
 from visdom import Visdom
 from collections import defaultdict
-
+import random
 # import torch
 def deformation(top_left,down_sample_ratio,ratio,scale):
     '''
@@ -125,8 +125,6 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
             all_gt_bboxes_dict[idx, idx, idx]=box  # 19
             idx+=1
 
-
-
     #找出每个gt最大的iou的样本
     for _,_,idx in all_gt_bboxes_dict:
         gt_box=all_gt_bboxes_dict[idx,idx,idx]
@@ -154,7 +152,7 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
         max_gt_iou_diff_dict[h,w,num]=[(gt_x-an_x)/an_w,(gt_y-an_y)/an_h,np.log(gt_w/an_w),np.log(gt_h/an_h)]
 
 
-        max_gt_iou_dict[h,w,num]=anchors_dict[h,w,num]
+        max_gt_iou_dict[h,w,num]=anchors_dict[h,w,num],gt_box
     #找出每个iou最大的框的位置和与真值框之间的差距
 
     for h, w, num in anchors_dict:
@@ -163,15 +161,19 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
         if [h,w,num] in max_gt_iou_positions_dict.values():
             continue
         max_iou = -1
-        # max_idx = -1
-        for idx, gt_box in enumerate(all_gt_bboxes_dict.values()):
+        max_idx = -1
+        for _,_,idx in all_gt_bboxes_dict:
 
+            gt_box=all_gt_bboxes_dict[idx, idx, idx]
             iou = cal_iou(anchor, gt_box)
+
             if iou>max_iou:
                 max_iou=iou
                 max_idx=idx
 
         if max_iou>upper_iou:
+            gt_box=all_gt_bboxes_dict[max_idx,max_idx,max_idx]
+
             gt_x, gt_y, gt_w, gt_h = gt_box
             an_x, an_y, an_w, an_h = anchor
 
@@ -179,7 +181,7 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
                                                np.log(gt_h / an_h)]
 
             #正样本需要记录下来对应的anchor-ground truth
-            pos_dict[h,w,num]=anchor
+            pos_dict[h,w,num]=anchor,gt_box
             #anchor和gt的差距用来构造target
         elif max_iou>lower_iou:#负样本和忽略样本不需要进行位置的回归
             ign_dict[h,w,num]=anchor
@@ -192,14 +194,25 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
     pos_dict.update(max_gt_iou_dict)
     return all_gt_bboxes_dict,pos_diff_dict,pos_dict,ign_dict,neg_dict
 
-def show_img_anchors(image,anchors_dict,color):
+def show_img_anchors(image,anchors_dict,show_gt=False):
     img_cp=image.copy()
-    for h,w,num in anchors_dict:
-        anchor=anchors_dict[h,w,num]
-        pt1 = (int(anchor[0]), int(anchor[1]))
-        pt2 = (int(anchor[2] + anchor[0]), int(anchor[3] + anchor[1]))
 
+    for h,w,num in anchors_dict:
+        color = [random.randint(0, 255)for _ in range(3)]
+        if show_gt:
+            anchor,gt_anchor = anchors_dict[h, w, num]
+            x, y, w, h = gt_anchor
+            pt1 = (int(x), int(y))
+            pt2 = (int(x + w), int(y + h))
+            cv2.rectangle(img_cp, pt1, pt2, color)
+        else:
+            anchor = anchors_dict[h, w, num]
+
+        x, y, w, h = anchor
+        pt1 = (int(x), int(y))
+        pt2 = (int(x + w), int(y + h))
         cv2.rectangle(img_cp, pt1, pt2, color)
+
 
     vis = Visdom(env="img")
     vis.image(img_cp.transpose(2,0,1))
