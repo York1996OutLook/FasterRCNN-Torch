@@ -102,18 +102,14 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
     :return: 返回值是索引，【h,w,num】这些位置是正样本框或者负样本框。
     '''
 
-    # pos_anchors=[]     #h,w,num:anchor-gt_box
-
     ign_dict={}  #dict of [h,w,num]:anchor x,y,w,h
     neg_dict={}  #dict of [h,w,num]:anchor x,y,w,h
     pos_dict={}  #dict of [h,w,num]:anchor x,y,w,h
 
     pos_diff_dict={}
 
-
-    # max_gt_iou_anchors=[]#list of [h,w,num]
     max_gt_iou_positions_dict={}#idx:[h,w,num]
-    max_gt_iou_diff_dict={}#h,w,num:anchor-gt_box
+    max_gt_iou_diff_dict={}#h,w,num:gt_box,anchor diff
     max_gt_iou_dict={} #h,w,num:anchor
 
     all_gt_bboxes_dict = defaultdict(list)
@@ -146,6 +142,7 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
 
         gt_box=all_gt_bboxes_dict[idx,idx,idx]
         gt_x,gt_y,gt_w,gt_h=gt_box
+
         anchor=anchors_dict[h,w,num]
         an_x,an_y,an_w,an_h=anchor
 
@@ -191,7 +188,9 @@ def filter_anchors(anchors_dict,gt_bboxes,upper_iou,lower_iou):
 
     # pos_anchors.extend(max_gt_iou_anchor.values())
     pos_diff_dict.update(max_gt_iou_diff_dict)
+
     pos_dict.update(max_gt_iou_dict)
+
     return all_gt_bboxes_dict,pos_diff_dict,pos_dict,ign_dict,neg_dict
 
 def show_img_anchors(image,anchors_dict,show_gt=False):

@@ -1,28 +1,49 @@
 import torch
 import torch.nn as nn
 from vgg16model import RPN
-import Utils
+import Utils,os
 from torch.utils.data import DataLoader
 from coco_utils import Coco,CocoData
 
 import random
 if __name__ == '__main__':
-    CUDA_INDEX=0
-    evaluation="val"
-    ann_path = "e:/python/coco_dataset/annotations_trainval2017/annotations/instances_%s2017.json"%evaluation
-    imgs_path = "e:/python/coco_dataset/%s2017"%evaluation
+    if torch.cuda.device_count()>1:
+        CUDA_INDEX = 1
+    else:
+        CUDA_INDEX=0
+
+    if os.path.exists( "e:/python/coco_dataset"):
+        use_server=False
+    else:
+        use_server=True
+    train=False
+    evaluation="val" if not train else "train"
+    print(evaluation)
+    if use_server:
+        ann_path = "/public/home/G19940018/3DGroup/Yaochun/MS_COCO/annotations_trainval2017/annotations/instances_%s2017.json" % evaluation
+        imgs_path = "/public/home/G19940018/3DGroup/Yaochun/MS_COCO/%s2017" % evaluation
+    else:
+        ann_path = "e:/python/coco_dataset/annotations_trainval2017/annotations/instances_%s2017.json" % evaluation
+        imgs_path = "e:/python/coco_dataset/%s2017" % evaluation
+
+    print(ann_path)
+    print(imgs_path)
     batch_size=1
     coco = Coco(ann_path, imgs_path)
     coco_data=CocoData(coco)
-    coco_loader=DataLoader(coco_data,batch_size,True)
+    save_path="./torch_data/coco_%s_data.data"%evaluation
+
+    torch.save(coco_data,save_path)
+    print("saved %s"%save_path)
+    # coco_loader=DataLoader(coco_data,batch_size,True)
     rpn_backbone = RPN().cuda(CUDA_INDEX)
 
-    optimizer = torch.optim.Adam(rpn_backbone.parameters())
+    optimizer = torch.optim.Adam(rpn_backbone.parameters(),0.001)
     cls_loss_func = torch.nn.MSELoss()
     reg_loss_func = nn.MSELoss()
     EPOCHES=50
     for eps in range(EPOCHES):
-        for raw_img,gt_bboxes in coco_data:
+        for raw_img, gt_bboxes in coco_data:
             img = Utils.process_img(raw_img) # 减去均值操作 # 427,640,3 宽 长 通道
             img_width=img.shape[1]
             img_height=img.shape[0]
@@ -33,7 +54,7 @@ if __name__ == '__main__':
 
             anchors_dict=Utils.get_anchors_dict(f_width,f_height,16)#得到所有的anchor (26,40,9,4),numpy 格式
             gt_anchors, pos_diff_dict,pos_dict, ign_dict, neg_dict = Utils.filter_anchors(anchors_dict, gt_bboxes, 0.7, 0.3)
-
+            #
             Utils.anchors_visualization(img_width,img_height,anchors_dict,show_center=True)
             Utils.show_img_anchors(raw_img, gt_anchors)
             Utils.show_img_anchors(raw_img, pos_dict,show_gt=True)

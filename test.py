@@ -1,6 +1,14 @@
-import torch
-x=[1,1,1,1,1]
-x=torch.Tensor(x)
-y=x.clone()*2
-loss_func=torch.nn.MSELoss()
-a=loss_func(x,y)
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+def fab(max):
+    n, a, b = 0, 0, 1
+    while n < max:
+        yield b  # 使用 yield
+        # print b
+        a, b = b, a + b
+        n = n + 1
+
+
+f=fab(9)
+print(next(f))

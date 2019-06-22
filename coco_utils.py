@@ -5,34 +5,39 @@ from torch.utils.data import Dataset
 # from PIL import Image
 from collections import defaultdict
 # import Utils
+
 from  visdom import Visdom
 class CocoData(Dataset):
     def __init__(self,coco):
         #img的格式是c,w,h
         super(CocoData, self).__init__()
+        # self.imgs=coco.imgs
         self.imgs=coco.imgs
-        self.boxes=coco.gt_boxes
-        self.length=len(self.imgs)
-    def __getitem__(self, index):
+        self.gt_boxes=coco.gt_boxes
+        self.length=coco.length
+    def __getitem__(self,index):
 
-        return self.imgs[index],self.boxes[index]
+        return self.imgs,self.gt_boxes
 
     def __len__(self):
         return self.length
+
 class Coco:
     def __init__(self,annotation_file_path,image_path):
         self.imgs_path=image_path #图片的根目录
         self.dataset_dict=None #数据集dict
         self.info={} #信息
-        self.images={} #图片
+        self.images={} #图片信息
         self.licenses={} #凭证
         self.categories={} #所有的类别
         self.annotations={} #所有的标注
         self.img2anns=defaultdict(list) #图片的标注
         self.cat2imgs=defaultdict(list) #类别的图片
         self.annotations_file=annotation_file_path #标记文件路径
-        self.imgs=[]
-        self.gt_boxes=[]
+        self.imgs=[]#图片内容
+        self.gt_boxes=[]#真实框 list of list
+        self.length=0
+        # self.imgs_gt_boxes=None
         self.load_jsons() #读取json文件
         self.create_index() #分析json文件
 
@@ -72,6 +77,7 @@ class Coco:
             self.categories[cat["id"]]=cat
             self.cat2imgs[ann["category_id"]].append(ann["image_id"])
 
+        # self.imgs_gt_boxes = self.get_all_img_and_box()
         self.get_all_img_and_box()
         print("index created!")
     def get_img_size(self,img_id):
@@ -100,7 +106,16 @@ class Coco:
     def get_all_img_and_box(self):
 
         img_ids=self.get_all_img_ids()
+        self.length=len(img_ids)
+        count=0
         for img_id in img_ids:
+            count+=1
+            if count%100==0:
+                print(count)
+
+            # yield self.get_img_by_id(img_id),self.get_gt_bboxes(img_id)
+            # yield
+
             self.imgs.append(self.get_img_by_id(img_id))
             self.gt_boxes.append(self.get_gt_bboxes(img_id))
 
